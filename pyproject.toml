@@ -1,0 +1,34 @@
+[project]
+name = "scribe"
+version = "0.1.0"
+description = "Voice Memos → Deepgram transcription → Apple Notes"
+requires-python = ">=3.11"
+dependencies = [
+    "deepgram-sdk>=4.0",
+    "openai>=1.0",
+    "watchdog>=4.0",
+    "python-dotenv>=1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+]
+
+[project.scripts]
+scribe = "scribe.main:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/scribe"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[dependency-groups]
+dev = [
+    "pytest-cov>=7.0.0",
+]

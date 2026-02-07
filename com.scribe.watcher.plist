@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Scribe launchd agent — auto-starts on login, restarts on crash.
+
+  Install:
+    1. Replace ALL_CAPS placeholders below with your actual paths:
+       - UV_PATH: output of `which uv`
+       - PROJECT_DIR: absolute path to this repo
+       - HOME_DIR: your home directory
+    2. Copy to LaunchAgents:
+         cp com.scribe.watcher.plist ~/Library/LaunchAgents/
+    3. Load:
+         launchctl load ~/Library/LaunchAgents/com.scribe.watcher.plist
+    4. Unload:
+         launchctl unload ~/Library/LaunchAgents/com.scribe.watcher.plist
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.scribe.watcher</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>UV_PATH</string>
+        <string>run</string>
+        <string>--project</string>
+        <string>PROJECT_DIR</string>
+        <string>scribe</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>PROJECT_DIR</string>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <true/>
+
+    <key>StandardOutPath</key>
+    <string>HOME_DIR/.scribe/launchd-stdout.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>HOME_DIR/.scribe/launchd-stderr.log</string>
+</dict>
+</plist>
