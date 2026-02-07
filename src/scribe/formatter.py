@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 from scribe.db import RecordingMetadata
+from scribe.summarizer import Summary
 
 
 def _format_duration(seconds: float) -> str:
@@ -35,7 +38,7 @@ def format_transcript(
     response: dict,
     metadata: RecordingMetadata,
     title: str | None = None,
-    summary: str | None = None,
+    summary: Summary | None = None,
 ) -> str:
     """Convert a Deepgram response into HTML for Apple Notes."""
     display_title = title or metadata.title
@@ -52,15 +55,29 @@ def format_transcript(
         return _format_plain_text(text, display_title, date_str, duration_str, summary)
 
 
-def _summary_html(summary: str | None) -> list[str]:
+def _summary_html(summary: Summary | None) -> list[str]:
     if not summary:
         return []
-    return [f"<p>{summary}</p>", "<hr>"]
+    lines = [f"<p>{summary.summary}</p>"]
+    for heading, items in [
+        ("Key Points", summary.key_points),
+        ("Action Items", summary.action_items),
+        ("Decisions", summary.decisions),
+        ("Open Questions", summary.open_questions),
+    ]:
+        if items:
+            lines.append(f"<h2>{heading}</h2>")
+            lines.append("<ul>")
+            for item in items:
+                lines.append(f"<li>{item}</li>")
+            lines.append("</ul>")
+    lines.append("<hr>")
+    return lines
 
 
 def _format_multi_speaker(
     utterances: list[dict], title: str, date_str: str, duration_str: str,
-    summary: str | None = None,
+    summary: Summary | None = None,
 ) -> str:
     num_speakers = _count_speakers(utterances)
     lines = [
@@ -79,7 +96,7 @@ def _format_multi_speaker(
 
 def _format_single_speaker(
     utterances: list[dict], title: str, date_str: str, duration_str: str,
-    summary: str | None = None,
+    summary: Summary | None = None,
 ) -> str:
     lines = [
         f"<h1>{title} - {date_str}</h1>",
@@ -96,7 +113,7 @@ def _format_single_speaker(
 
 def _format_plain_text(
     text: str, title: str, date_str: str, duration_str: str,
-    summary: str | None = None,
+    summary: Summary | None = None,
 ) -> str:
     lines = [
         f"<h1>{title} - {date_str}</h1>",
@@ -115,7 +132,7 @@ def format_transcript_markdown(
     response: dict,
     metadata: RecordingMetadata,
     title: str | None = None,
-    summary: str | None = None,
+    summary: Summary | None = None,
 ) -> str:
     """Convert a Deepgram response into Markdown for file output."""
     display_title = title or metadata.title
@@ -132,15 +149,30 @@ def format_transcript_markdown(
         return _format_plain_text_md(text, display_title, date_str, duration_str, summary)
 
 
-def _summary_md(summary: str | None) -> list[str]:
+def _summary_md(summary: Summary | None) -> list[str]:
     if not summary:
         return []
-    return ["", summary, "", "---"]
+    lines = ["", summary.summary]
+    for heading, items in [
+        ("Key Points", summary.key_points),
+        ("Action Items", summary.action_items),
+        ("Decisions", summary.decisions),
+        ("Open Questions", summary.open_questions),
+    ]:
+        if items:
+            lines.append("")
+            lines.append(f"## {heading}")
+            lines.append("")
+            for item in items:
+                lines.append(f"- {item}")
+    lines.append("")
+    lines.append("---")
+    return lines
 
 
 def _format_multi_speaker_md(
     utterances: list[dict], title: str, date_str: str, duration_str: str,
-    summary: str | None = None,
+    summary: Summary | None = None,
 ) -> str:
     num_speakers = _count_speakers(utterances)
     lines = [
@@ -163,7 +195,7 @@ def _format_multi_speaker_md(
 
 def _format_single_speaker_md(
     utterances: list[dict], title: str, date_str: str, duration_str: str,
-    summary: str | None = None,
+    summary: Summary | None = None,
 ) -> str:
     lines = [
         f"# {title} - {date_str}",
@@ -184,7 +216,7 @@ def _format_single_speaker_md(
 
 def _format_plain_text_md(
     text: str, title: str, date_str: str, duration_str: str,
-    summary: str | None = None,
+    summary: Summary | None = None,
 ) -> str:
     lines = [
         f"# {title} - {date_str}",

@@ -20,7 +20,14 @@ def _mock_openai_response(content: str) -> MagicMock:
 class TestSummarize:
     def test_single_speaker_prompt(self):
         """Single speaker should use 'voice note' context."""
-        expected = {"title": "My Voice Note", "summary": "A brief summary."}
+        expected = {
+            "title": "My Voice Note",
+            "summary": "A brief summary.",
+            "key_points": ["point one"],
+            "action_items": [],
+            "decisions": [],
+            "open_questions": [],
+        }
         mock_response = _mock_openai_response(json.dumps(expected))
 
         with patch("scribe.summarizer.OpenAI") as MockClient:
@@ -29,7 +36,10 @@ class TestSummarize:
 
             result = summarize("Hello world", 120.0, 1, "fake-key")
 
-            assert result == Summary(title="My Voice Note", summary="A brief summary.")
+            assert result == Summary(
+                title="My Voice Note", summary="A brief summary.",
+                key_points=["point one"], action_items=[], decisions=[], open_questions=[],
+            )
             call_args = client.chat.completions.create.call_args
             prompt = call_args.kwargs["messages"][0]["content"]
             assert "voice note" in prompt
@@ -37,7 +47,14 @@ class TestSummarize:
 
     def test_multi_speaker_prompt(self):
         """Multi speaker should use 'meeting transcript' context."""
-        expected = {"title": "Team Standup", "summary": "Discussed sprint progress."}
+        expected = {
+            "title": "Team Standup",
+            "summary": "Discussed sprint progress.",
+            "key_points": ["sprint is on track"],
+            "action_items": ["Alice to update docs"],
+            "decisions": ["ship on Friday"],
+            "open_questions": ["what about testing?"],
+        }
         mock_response = _mock_openai_response(json.dumps(expected))
 
         with patch("scribe.summarizer.OpenAI") as MockClient:
@@ -46,7 +63,11 @@ class TestSummarize:
 
             result = summarize("Speaker 1 said hello", 600.0, 3, "fake-key")
 
-            assert result == Summary(title="Team Standup", summary="Discussed sprint progress.")
+            assert result == Summary(
+                title="Team Standup", summary="Discussed sprint progress.",
+                key_points=["sprint is on track"], action_items=["Alice to update docs"],
+                decisions=["ship on Friday"], open_questions=["what about testing?"],
+            )
             call_args = client.chat.completions.create.call_args
             prompt = call_args.kwargs["messages"][0]["content"]
             assert "meeting transcript" in prompt
@@ -76,7 +97,10 @@ class TestSummarize:
             client.chat.completions.create.return_value = mock_response
 
             result = summarize("Some text", 60.0, 1, "fake-key")
-            assert result == Summary(title="My Note", summary="A summary.")
+            assert result == Summary(
+                title="My Note", summary="A summary.",
+                key_points=[], action_items=[], decisions=[], open_questions=[],
+            )
 
     def test_api_error_propagates(self):
         """API errors should propagate so caller can handle fallback."""

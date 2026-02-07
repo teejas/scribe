@@ -78,7 +78,6 @@ def _process_file(file_path: str, ledger: Ledger, cfg: Config) -> None:
         response = transcribe(cfg.api_key, file_path, base_url=cfg.deepgram_base_url)
 
         # 3. Summarize (optional — requires OPENAI_API_KEY)
-        generated_title = None
         generated_summary = None
         if cfg.openai_api_key:
             try:
@@ -95,17 +94,16 @@ def _process_file(file_path: str, ledger: Ledger, cfg: Config) -> None:
                     speaker_count = 1
 
                 if transcript_text:
-                    result = summarize(
+                    generated_summary = summarize(
                         transcript_text, metadata.duration_seconds, speaker_count, cfg.openai_api_key
                     )
-                    generated_title = result.title
-                    generated_summary = result.summary
-                    logger.info("Generated title: %s", generated_title)
+                    logger.info("Generated title: %s", generated_summary.title)
             except Exception as e:
                 logger.warning("Summarization failed, using original title: %s", e)
 
         # 4. Format
-        note_title = generated_title or metadata.title
+        note_title = generated_summary.title if generated_summary else metadata.title
+        generated_title = generated_summary.title if generated_summary else None
         html = format_transcript(response, metadata, title=generated_title, summary=generated_summary)
 
         # 5. Save to Apple Notes
