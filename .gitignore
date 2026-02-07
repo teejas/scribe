@@ -1,0 +1,11 @@
+PLAN.md
+.env
+__pycache__/
+*.pyc
+.scribe/
+*.egg-info/
+dist/
+build/
+.venv/
+.pytest_cache/
+.coverage
