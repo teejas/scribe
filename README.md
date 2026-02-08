@@ -2,12 +2,12 @@
 
 A macOS daemon that watches for new Apple Voice Memos recordings, transcribes them with speaker diarization via Deepgram, and saves formatted notes to Apple Notes.
 
-Optionally generates a descriptive title and summary using GPT-4o-mini, replacing the generic Voice Memos title.
+Optionally generates a descriptive title and summary using GPT-4.1, replacing the generic Voice Memos title.
 
 ## How it works
 
 ```
-Voice Memos (.m4a) → Deepgram transcription → [Optional: GPT-4o-mini summary] → Apple Notes + Markdown
+Voice Memos (.m4a) → Deepgram transcription → [Optional: GPT-4.1 summary] → Apple Notes + Markdown
 ```
 
 1. Watches the Voice Memos directory for new `.m4a` files
@@ -112,4 +112,4 @@ uv run pytest -v
 ## Cost
 
 - **Deepgram**: ~$0.0077/min. A 30-min recording costs ~$0.23.
-- **OpenAI** (GPT-4o-mini): ~$0.001 per recording. Negligible.
+- **OpenAI** (GPT-4.1): ~$0.01-0.03 per recording. Minimal.

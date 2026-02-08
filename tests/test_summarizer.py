@@ -111,8 +111,8 @@ class TestSummarize:
             with pytest.raises(Exception, match="API Error"):
                 summarize("Some text", 60.0, 1, "fake-key")
 
-    def test_uses_gpt4o_mini_model(self):
-        """Should call GPT-4o-mini specifically."""
+    def test_uses_gpt4o_model(self):
+        """Should call GPT-4o specifically."""
         expected = {"title": "Note", "summary": "Summary."}
         mock_response = _mock_openai_response(json.dumps(expected))
 
@@ -123,4 +123,4 @@ class TestSummarize:
             summarize("Some text", 60.0, 1, "fake-key")
 
             call_args = client.chat.completions.create.call_args
-            assert call_args.kwargs["model"] == "gpt-4o-mini"
+            assert call_args.kwargs["model"] == "gpt-4.1"
