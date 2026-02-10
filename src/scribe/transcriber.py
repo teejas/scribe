@@ -21,7 +21,12 @@ def _create_client(api_key: str, base_url: str | None = None) -> DeepgramClient:
     return DeepgramClient(**kwargs)
 
 
-def transcribe(api_key: str, file_path: str, base_url: str | None = None) -> dict:
+def transcribe(
+    api_key: str,
+    file_path: str,
+    base_url: str | None = None,
+    keyterms: list[str] | None = None,
+) -> dict:
     """Transcribe an audio file via Deepgram with diarization.
 
     Returns the raw Deepgram response as a dict.
@@ -43,6 +48,8 @@ def transcribe(api_key: str, file_path: str, base_url: str | None = None) -> dic
                 utterances=True,
                 punctuate=True,
             )
+            if keyterms:
+                transcribe_kwargs["keyterm"] = keyterms
             if not base_url:
                 transcribe_kwargs["mip_opt_out"] = True
             response = client.listen.v1.media.transcribe_file(**transcribe_kwargs)

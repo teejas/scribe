@@ -22,6 +22,9 @@ LOG_DIR = Path.home() / ".scribe"
 LOG_FILE = LOG_DIR / "scribe.log"
 
 
+KEYTERMS_FILE = Path.home() / ".scribe" / "keyterms.txt"
+
+
 @dataclass
 class Config:
     api_key: str
@@ -30,6 +33,7 @@ class Config:
     output_dir: Path | None
     deepgram_base_url: str | None
     openai_api_key: str | None
+    keyterms: list[str]
 
 
 def _setup_logging() -> None:
@@ -46,6 +50,25 @@ def _setup_logging() -> None:
     root.setLevel(logging.INFO)
     root.addHandler(file_handler)
     root.addHandler(stream_handler)
+
+
+def _load_keyterms() -> list[str]:
+    """Load vocabulary hints from ~/.scribe/keyterms.txt.
+
+    Returns empty list if the file doesn't exist.
+    """
+    if not KEYTERMS_FILE.exists():
+        logger.info("No keyterms file at %s — skipping vocabulary hints", KEYTERMS_FILE)
+        return []
+
+    terms = []
+    for line in KEYTERMS_FILE.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if line and not line.startswith("#"):
+            terms.append(line)
+
+    logger.info("Loaded %d keyterms from %s", len(terms), KEYTERMS_FILE)
+    return terms
 
 
 def _save_markdown(markdown: str, title: str, date_str: str, output_dir: Path) -> None:
@@ -75,7 +98,7 @@ def _process_file(file_path: str, ledger: Ledger, cfg: Config) -> None:
         logger.info("Processing: %s (%s)", metadata.title, name)
 
         # 2. Transcribe
-        response = transcribe(cfg.api_key, file_path, base_url=cfg.deepgram_base_url)
+        response = transcribe(cfg.api_key, file_path, base_url=cfg.deepgram_base_url, keyterms=cfg.keyterms)
 
         # 3. Summarize (optional — requires OPENAI_API_KEY)
         generated_summary = None
@@ -85,17 +108,24 @@ def _process_file(file_path: str, ledger: Ledger, cfg: Config) -> None:
 
                 utterances = _get_utterances(response)
                 if utterances:
-                    transcript_text = " ".join(
-                        u.get("transcript", "").strip() for u in utterances if u.get("transcript", "").strip()
-                    )
                     speaker_count = _count_speakers(utterances)
+                    if speaker_count > 1:
+                        transcript_text = " ".join(
+                            f"Speaker {u.get('speaker', 0) + 1}: {u.get('transcript', '').strip()}"
+                            for u in utterances if u.get("transcript", "").strip()
+                        )
+                    else:
+                        transcript_text = " ".join(
+                            u.get("transcript", "").strip() for u in utterances if u.get("transcript", "").strip()
+                        )
                 else:
                     transcript_text = _get_transcript_text(response)
                     speaker_count = 1
 
                 if transcript_text:
                     generated_summary = summarize(
-                        transcript_text, metadata.duration_seconds, speaker_count, cfg.openai_api_key
+                        transcript_text, metadata.duration_seconds, speaker_count,
+                        cfg.openai_api_key, keyterms=cfg.keyterms or None,
                     )
                     logger.info("Generated title: %s", generated_summary.title)
             except Exception as e:
@@ -179,6 +209,8 @@ def main() -> None:
     if not openai_api_key:
         logger.info("OPENAI_API_KEY not set — summarization disabled.")
 
+    keyterms = _load_keyterms()
+
     cfg = Config(
         api_key=api_key,
         notes_folder=os.getenv("SCRIBE_NOTES_FOLDER", "Scribe"),
@@ -186,6 +218,7 @@ def main() -> None:
         output_dir=output_dir,
         deepgram_base_url=os.getenv("DEEPGRAM_BASE_URL"),
         openai_api_key=openai_api_key,
+        keyterms=keyterms,
     )
 
     if cfg.deepgram_base_url:

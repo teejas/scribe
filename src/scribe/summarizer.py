@@ -22,13 +22,15 @@ def summarize(
     duration_seconds: float,
     speaker_count: int,
     api_key: str,
+    keyterms: list[str] | None = None,
 ) -> Summary:
     """Generate a title and summary from transcript text using GPT-4o.
 
     Returns a Summary with the generated title and summary text.
     Raises on API errors — caller is responsible for fallback.
     """
-    if speaker_count > 1:
+    is_meeting = speaker_count > 1
+    if is_meeting:
         context = "meeting transcript"
         note_type = "meeting"
     else:
@@ -36,10 +38,26 @@ def summarize(
         note_type = "voice note"
 
     duration_min = int(duration_seconds / 60)
+    is_long = duration_seconds > 300  # >5 min
+
+    key_points_range = "5-15" if is_long else "3-8"
+    max_tokens = 2500 if is_long else 1500
+
+    keyterms_line = ""
+    if keyterms:
+        keyterms_line = f"\nKnown people and terms for reference: {', '.join(keyterms)}\n"
+
+    meeting_instruction = ""
+    if is_meeting:
+        meeting_instruction = (
+            "You MUST capture every person mentioned by name and their associated "
+            "update, task, or status as separate key points. Do not skip anyone.\n"
+        )
 
     prompt = (
         f"You are an expert analyst summarizing a {context}. "
-        f"Duration: {duration_min} minutes. Speakers: {speaker_count}.\n\n"
+        f"Duration: {duration_min} minutes. Speakers: {speaker_count}.\n"
+        f"{keyterms_line}\n"
         f"Transcript:\n{transcript_text}\n\n"
         f"Your job is to extract the SALIENT POINTS — the concrete, specific "
         f"information that someone would actually want to reference later. "
@@ -54,12 +72,14 @@ def summarize(
         f"Rules:\n"
         f"- summary: A rich 3-5 sentence synopsis that captures the substance "
         f"of the {note_type}, not just the topic. Include specifics.\n"
-        f"- key_points: 3-8 specific, concrete bullet points. Each should "
+        f"- key_points: {key_points_range} specific, concrete bullet points. Each should "
         f"contain real information from the conversation — names, dates, "
         f"numbers, specifics. Never write vague points like 'discussed the project'.\n"
+        f"{meeting_instruction}"
         f"- action_items: concrete next-steps with owners and deadlines if mentioned. Empty list if none.\n"
         f"- decisions: explicit decisions or agreements reached. Empty list if none.\n"
-        f"- open_questions: unresolved questions or disagreements. Empty list if none.\n\n"
+        f"- open_questions: unresolved questions or disagreements. Empty list if none.\n"
+        f"- If a name sounds garbled or unclear, include your best guess with [?] appended.\n\n"
         f"Respond with JSON only, no markdown formatting.\n"
         f'{{"title": "concise descriptive title (max 60 chars)", '
         f'"summary": "3-5 sentence substantive summary", '
@@ -74,7 +94,7 @@ def summarize(
         model="gpt-4.1",
         messages=[{"role": "user", "content": prompt}],
         temperature=0.3,
-        max_tokens=1500,
+        max_tokens=max_tokens,
     )
 
     content = response.choices[0].message.content.strip()
